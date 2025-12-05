@@ -1,53 +1,52 @@
-// server.js
 const express = require('express');
-const cors = require('cors'); 
 const app = express();
-const port = 3000; // Standard port for local Node.js development
+const cors = require('cors'); // Essential for allowing your Expo app to access the API
+const PORT = 3000; 
 
-// Use CORS middleware to allow your Expo app to access this server
+// Middleware to enable Cross-Origin Resource Sharing (CORS)
 app.use(cors());
 
-// Simple local variable to store the latest sensor data
-let latestSensorData = { 
-    device: 'N/A', 
-    temp: 'N/A', 
-    humidity: 'N/A', 
-    timestamp: 'N/A' 
+// Global variable to hold the latest sensor data
+let latestSensorData = {
+    temperature: '29.9°C',
+    humidity: '85.1%',
+    timestamp: new Date().toISOString(),
+    source: 'Worker01'
 };
 
-// --- ROUTE 1: ESP32 Data Receiver ---
-// Path: /api/vitaltrack
-// Method: GET (since the ESP32 sends data via query parameters)
-app.get('/api/vitaltrack', (req, res) => {
-    // req.query pulls the data from the URL (e.g., ?temp=36.5&humidity=55.2)
-    const { device, temp, humidity } = req.query;
+// --- START: Replace this section with your actual ESP32 data handling ---
+// This is a placeholder/simulator function based on your image log
+function handleNewData(temp, hum, worker) {
+    // 1. Update the latest data
+    latestSensorData = {
+        temperature: temp + '°C',
+        humidity: hum + '%',
+        timestamp: new Date().toISOString(),
+        source: worker
+    };
+    // 2. Log it (as you already do)
+    console.log(`[${latestSensorData.timestamp}] Data Received: ${temp}°C, ${hum}% from ${worker}`);
+}
 
-    if (device && temp && humidity) {
-        // Store the incoming data as the latest record
-        latestSensorData = {
-            device: device,
-            temp: parseFloat(temp),
-            humidity: parseFloat(humidity),
-            timestamp: new Date().toISOString()
-        };
-        console.log(`[${latestSensorData.timestamp}] Data Received: ${temp}°C, ${humidity}% from ${device}`);
-        
-        res.status(200).send('Data Received OK');
-    } else {
-        res.status(400).send('Missing parameters (device, temp, or humidity)');
-    }
+// Simulate data update every 5 seconds for testing
+setInterval(() => {
+    // Slight variation in data to show it's updating
+    const temp = (29.9 + Math.random() * 0.1).toFixed(1); 
+    const hum = (85.1 + Math.random() * 0.1).toFixed(1);
+    handleNewData(temp, hum, 'Worker01');
+}, 5000);
+// --- END: Replace this section with your actual ESP32 data handling ---
+
+
+// API Endpoint: GET /api/data
+// When the Expo app requests this, it sends the latest data object.
+app.get('/api/data', (req, res) => {
+    res.json(latestSensorData); // Send the JavaScript object as a JSON response
 });
 
-// --- ROUTE 2: React Native App Data Fetcher ---
-// Path: /api/getLatestSensorData
-// Method: GET
-app.get('/api/getLatestSensorData', (req, res) => {
-    // Return the latest stored data to the mobile app
-    res.json(latestSensorData);
-});
-
-// Start the server and listen on the defined port
-app.listen(port, () => {
-    console.log(`✅ VitalTrack API listening on port ${port}`);
-    console.log(`To test, use the IP address of this computer.`);
+// Start the Express server
+app.listen(PORT, () => {
+    console.log(`✅ Server listening on port ${PORT}`);
+    console.log(`API available at http://localhost:${PORT}/api/data`);
+    console.log("REMINDER: Use your machine's LOCAL IP (e.g., 192.168.1.100) instead of 'localhost' in your Expo app.");
 });
